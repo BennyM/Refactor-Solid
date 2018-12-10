@@ -86,77 +86,72 @@ namespace web.Controllers
                     discountAmount = price * discount.DiscountPercentage.Value;
                 }
                 else if (discount.FlatDiscountAmount.HasValue)
-                {›
+                {
+                    discountAmount = discount.FlatDiscountAmount.Value;
+                }
                 else if (discount.FreeShipping.HasValue)
-                    {
-                        discountAmount = shippingPrice;
-                    }
-                    logger.LogDebug("Discount to apply {0}", discountAmount);
+                {
+                    discountAmount = shippingPrice;
                 }
+                logger.LogDebug("Discount to apply {0}", discountAmount);
+            }
+            var priceToPay = price - discountAmount;
+            if (priceToPay > 0)
+            {
                 HandlePayment(order, price - discountAmount);
-                foreach (var notification in CreateNotifications(order))
-                {
-                    notification.Send();
-                }
-
-
-
-                logger.LogDebug("Order processed");
-                return Ok();
             }
-
-            private void HandlePayment(OrderModel o, double total)
+            foreach (var notification in CreateNotifications(order))
             {
-                var gateway = CreatePaymentGateway(o);
-
-                if (gateway is CreditCardService cc)
-                {
-                    ChargeCreditCard(cc, o, total);
-                }
-                else
-                {
-                    ChargePaypalAccount(gateway, o, total);
-                }
-            }
-
-            private void ChargeCreditCard(CreditCardService cc, OrderModel o, double total)
-            {
-            }
-
-            private void ChargePaypalAccount(IPaymentService gateway, OrderModel o, double total)
-            {
+                notification.Send();
             }
 
 
-            private IPaymentService CreatePaymentGateway(OrderModel o)
-            {
-                if (!string.IsNullOrWhiteSpace(o.CreditCardNumber))
-                {
-                    return new CreditCardService();
-                }
-                return new PaypalService();
-            }
 
-            private IEnumerable<INotification> CreateNotifications(OrderModel model)
+            logger.LogDebug("Order processed");
+            return Ok();
+
+        }
+
+        private void HandlePayment(OrderModel o, double total)
+        {
+            var gateway = CreatePaymentGateway(o);
+
+            if (gateway is CreditCardService cc)
             {
-                if (!string.IsNullOrWhiteSpace(model.MobilePhone))
-                {
-                    yield return new SmsNotification();
-                }
-                yield return new MailNotification();
+                ChargeCreditCard(cc, o, total);
+            }
+            else
+            {
+                ChargePaypalAccount(gateway, o, total);
             }
         }
 
+        private void ChargeCreditCard(CreditCardService cc, OrderModel o, double total)
+        {
+        }
+
+        private void ChargePaypalAccount(IPaymentService gateway, OrderModel o, double total)
+        {
+        }
 
 
+        private IPaymentService CreatePaymentGateway(OrderModel o)
+        {
+            if (!string.IsNullOrWhiteSpace(o.CreditCardNumber))
+            {
+                return new CreditCardService();
+            }
+            return new PaypalService();
+        }
 
-
-
-
-
-
-
-
-
-
+        private IEnumerable<INotification> CreateNotifications(OrderModel model)
+        {
+            if (!string.IsNullOrWhiteSpace(model.MobilePhone))
+            {
+                yield return new SmsNotification();
+            }
+            yield return new MailNotification();
+        }
     }
+
+}
